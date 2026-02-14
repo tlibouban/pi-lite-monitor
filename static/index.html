@@ -8,73 +8,249 @@
     <meta name="author" content="Chanchai Jeimvijack">
     <meta name="keywords" content="Raspberry Pi, Monitor, Stats, CPU, Memory, Temperature, Network, Disk">
     <title>Pi Lite Monitor</title>
-    <link rel="icon" href="favicon.ico">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            /* Light Theme (Default) */
+            --bg-color: #f1f5f9;
+            --container-bg: #ffffff;
+            --text-color: #1e293b;
+            --heading-color: #0f172a;
+            --metric-bg: #f8fafc;
+            --metric-border: #e2e8f0;
+            --metric-hover-border: #cbd5e1;
+            --metric-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            --container-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --cyan: #06b6d4;
+            --slate: #64748b;
+
+            --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        /* Matrix Theme */
+        [data-theme="matrix"] {
+            --bg-color: #000000;
+            --container-bg: #0d0d0d;
+            --text-color: #00ff00;
+            --heading-color: #00ff00;
+            --metric-bg: #001a00;
+            --metric-border: #003300;
+            --metric-hover-border: #00ff00;
+            --metric-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+            --container-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+
+            --primary: #00ff00;
+            --success: #00ff00;
+            --warning: #00ff00;
+            --danger: #00ff00;
+            --purple: #00ff00;
+            --cyan: #00ff00;
+            --slate: #00ff00;
+
+            --font-family: 'Courier New', Courier, monospace;
+        }
+
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f6f8fa;
+            font-family: var(--font-family);
+            background: var(--bg-color);
             margin: 0;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: var(--text-color);
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         .container {
-            background: #fff;
-            border-radius: 1.2em;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1.5px 4px rgba(0, 0, 0, 0.04);
-            padding: 2em 2.5em;
-            max-width: 400px;
+            background: var(--container-bg);
+            border-radius: 16px;
+            box-shadow: var(--container-shadow);
+            padding: 2.5rem;
+            max-width: 450px;
             width: 100%;
-            margin: 2em;
-            display: flex;
-            flex-direction: column;
-            gap: 1.2em;
+            margin: 2rem;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        /* Scanline effect for Matrix theme */
+        [data-theme="matrix"] .container::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            border-radius: 16px;
         }
 
         h1 {
-            font-size: 1.7em;
-            margin: 0 0 0.5em 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 0 1.5rem 0;
             text-align: center;
-            letter-spacing: 0.01em;
+            color: var(--heading-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: color 0.3s ease;
+        }
+
+        [data-theme="matrix"] h1 {
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        h1 i {
+            color: var(--primary);
         }
 
         .metrics-list {
             display: flex;
             flex-direction: column;
-            gap: 1em;
+            gap: 1rem;
         }
 
         .metric {
-            background: #f0f4f8;
-            border-radius: 0.7em;
-            padding: 1em 1.2em;
-            font-size: 1.08em;
+            background: var(--metric-bg);
+            border: 1px solid var(--metric-border);
+            border-radius: 12px;
+            padding: 1rem;
             display: flex;
             align-items: center;
-            gap: 0.7em;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+            gap: 1rem;
+            transition: all 0.2s ease;
         }
 
-        .metric-icon {
-            font-size: 1.3em;
+        .metric:hover {
+            border-color: var(--metric-hover-border);
+            transform: translateY(-1px);
+            box-shadow: var(--metric-shadow);
+        }
+
+        .icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
             flex-shrink: 0;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        [data-theme="matrix"] .icon-box {
+            background: transparent !important;
+            border: 1px solid #00ff00;
+            box-shadow: 0 0 5px #00ff00;
+            text-shadow: 0 0 2px #00ff00;
+        }
+
+        .metric-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--slate);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        [data-theme="matrix"] .metric-label {
+            color: #00aa00;
+        }
+
+        /* Specific colors for icons (Light Mode) */
+        html:not([data-theme="matrix"]) #host .icon-box {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+        }
+
+        html:not([data-theme="matrix"]) #os .icon-box {
+            background: rgba(100, 116, 139, 0.1);
+            color: var(--slate);
+        }
+
+        html:not([data-theme="matrix"]) #cpu .icon-box {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        html:not([data-theme="matrix"]) #memory .icon-box {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        html:not([data-theme="matrix"]) #temp .icon-box {
+            background: rgba(236, 72, 153, 0.1);
+            color: #ec4899;
+        }
+
+        html:not([data-theme="matrix"]) #network .icon-box {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--cyan);
+        }
+
+        html:not([data-theme="matrix"]) #disk .icon-box {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        html:not([data-theme="matrix"]) #uptime .icon-box {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--purple);
+        }
+
+        html:not([data-theme="matrix"]) #docker .icon-box {
+            background: rgba(14, 165, 233, 0.1);
+            color: #0ea5e9;
+        }
+
+        html:not([data-theme="matrix"]) #update .icon-box {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--slate);
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+            z-index: 10;
+        }
+
+        .theme-toggle:hover {
+            color: var(--primary);
         }
 
         @media (max-width: 600px) {
             .container {
-                padding: 1em 0.5em;
-                max-width: 120vw;
-            }
-
-            .metric {
-                font-size: 1em;
-                padding: 0.7em 0.7em;
-            }
-
-            h1 {
-                font-size: 1.2em;
+                padding: 1.5rem;
+                margin: 1rem;
             }
         }
     </style>
@@ -82,29 +258,125 @@
 
 <body>
     <div class="container">
-        <h1>🔎 Pi Lite Monitor</h1>
+        <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+        </button>
+
+        <h1><i class="fa-solid fa-wave-square"></i> RaspberryPi 5 Monitor</h1>
         <div class="metrics-list">
-            <div class="metric" id="host"><span class="metric-icon">💻</span><span></span></div>
-            <div class="metric" id="os"><span class="metric-icon">🌐</span><span></span></div>
-            <div class="metric" id="cpu"><span class="metric-icon">⚙️</span><span></span></div>
-            <div class="metric" id="memory"><span class="metric-icon">💡</span><span></span></div>
-            <div class="metric" id="temp"><span class="metric-icon">🌡️</span><span></span></div>
-            <div class="metric" id="network"><span class="metric-icon">🛜</span><span></span></div>
-            <div class="metric" id="disk"><span class="metric-icon">💽</span><span></span></div>
+            <div class="metric" id="host">
+                <div class="icon-box"><i class="fa-solid fa-server"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Hostname</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="os">
+                <div class="icon-box"><i class="fa-brands fa-linux"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">System</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="cpu">
+                <div class="icon-box"><i class="fa-solid fa-microchip"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">CPU Usage</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="memory">
+                <div class="icon-box"><i class="fa-solid fa-memory"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Memory</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="temp">
+                <div class="icon-box"><i class="fa-solid fa-temperature-half"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Temperature</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="network">
+                <div class="icon-box"><i class="fa-solid fa-network-wired"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Network</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="disk">
+                <div class="icon-box"><i class="fa-solid fa-hard-drive"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Storage</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="uptime">
+                <div class="icon-box"><i class="fa-solid fa-clock"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Uptime</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="docker">
+                <div class="icon-box"><i class="fa-brands fa-docker"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Docker Containers</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
+            <div class="metric" id="update">
+                <div class="icon-box"><i class="fa-solid fa-circle-arrow-up"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Last Update</span>
+                    <span class="value">Loading...</span>
+                </div>
+            </div>
         </div>
     </div>
     <script>
+        // Theme Logic
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            html.setAttribute('data-theme', savedTheme);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            if (html.getAttribute('data-theme') === 'matrix') {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.setAttribute('data-theme', 'matrix');
+                localStorage.setItem('theme', 'matrix');
+            }
+        });
+
+        // Data Fetching
         async function fetchStats() {
-            const res = await fetch('/api/stats');
-            const data = await res.json();
-            document.querySelector('#host span:last-child').textContent = `Host: ${data.host}`;
-            document.querySelector('#os span:last-child').textContent = `OS: ${data.os}`;
-            document.querySelector('#cpu span:last-child').textContent = `CPU Usage: ${data.cpu_usage.toFixed(1)}%`;
-            document.querySelector('#memory span:last-child').textContent = `Memory: ${data.used_memory.toLocaleString("en-US")} / ${data.total_memory.toLocaleString("en-US")} MB (${data.mempercentage.toFixed(1)}%)`;
-            document.querySelector('#temp span:last-child').textContent = `Temperature: ${data.temp.toFixed(2)} °C`;
-            document.querySelector('#network span:last-child').textContent = `Download ${data.received.toLocaleString("en-US")} MB / Upload ${data.transmitted.toLocaleString("en-US")} MB`;
-            document.querySelector('#disk span:last-child').innerHTML =
-                `Storage: ${data.free_disk.toLocaleString("en-US")} MB<br>Used: ${data.used_disk.toLocaleString("en-US")} MB<br>Total: ${data.total_disk.toLocaleString("en-US")} MB`;
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+
+                document.querySelector('#host .value').textContent = data.host;
+                document.querySelector('#os .value').textContent = data.os;
+                document.querySelector('#cpu .value').textContent = `${data.cpu_usage.toFixed(1)}%`;
+                document.querySelector('#memory .value').textContent = `${data.used_memory.toLocaleString("en-US")} / ${data.total_memory.toLocaleString("en-US")} MB (${data.mempercentage.toFixed(1)}%)`;
+                document.querySelector('#temp .value').textContent = `${data.temp.toFixed(2)} °C`;
+                document.querySelector('#network .value').textContent = `↓ ${data.received.toLocaleString("en-US")} MB / ↑ ${data.transmitted.toLocaleString("en-US")} MB`;
+                document.querySelector('#disk .value').innerHTML =
+                    `Free: ${data.free_disk.toLocaleString("en-US")} MB (Used: ${data.used_disk.toLocaleString("en-US")} MB)`;
+                document.querySelector('#uptime .value').textContent = `${data.uptime_hours} Hours`;
+                document.querySelector('#docker .value').textContent = `${data.docker_containers} Active`;
+                document.querySelector('#update .value').textContent = data.last_update;
+            } catch (e) {
+                console.error("Error fetching stats:", e);
+            }
         }
         setInterval(fetchStats, 5000);
         fetchStats();

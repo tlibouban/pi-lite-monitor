@@ -4,6 +4,11 @@ use std::sync::Arc;
 use sysinfo::{Components, Disks, Networks, System};
 use tokio::sync::RwLock;
 
+use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::fs;
+use chrono::DateTime;
+
 #[derive(Serialize, Clone)]
 struct Stats {
     host: String,
@@ -18,6 +23,43 @@ struct Stats {
     total_disk: u64,
     used_disk: u64,
     free_disk: u64,
+    uptime_hours: u64,
+    docker_containers: u32,
+    last_update: String,
+}
+
+fn get_docker_count() -> u32 {
+    let output = Command::new("docker")
+        .args(["ps", "-q"])
+        .output();
+
+    match output {
+        Ok(o) => {
+            let s = String::from_utf8_lossy(&o.stdout);
+            s.lines().count() as u32
+        }
+        Err(_) => 0,
+    }
+}
+
+fn get_last_update() -> String {
+    // Check /var/lib/apt/periodic/update-success-stamp
+    if let Ok(metadata) = fs::metadata("/var/lib/apt/periodic/update-success-stamp") {
+        if let Ok(time) = metadata.modified() {
+            let datetime: DateTime<chrono::Local> = time.into();
+            return datetime.format("%Y-%m-%d %H:%M").to_string();
+        }
+    }
+    
+    // Fallback: Check /var/lib/apt/lists directory modification time
+    if let Ok(metadata) = fs::metadata("/var/lib/apt/lists") {
+        if let Ok(time) = metadata.modified() {
+            let datetime: DateTime<chrono::Local> = time.into();
+            return datetime.format("%Y-%m-%d %H:%M").to_string();
+        }
+    }
+
+    "Unknown".to_string()
 }
 
 async fn get_stats(system: Arc<RwLock<System>>) -> Json<Stats> {
@@ -57,6 +99,10 @@ async fn get_stats(system: Arc<RwLock<System>>) -> Json<Stats> {
         disk_free += disk.available_space();
     }
     let disk_used = disk_total - disk_free;
+
+    let uptime = System::uptime();
+    let uptime_hours = uptime / 3600;
+
     Json(Stats {
         host: System::host_name().unwrap_or_else(|| "Unknown".to_string()),
         os: format!(
@@ -74,6 +120,9 @@ async fn get_stats(system: Arc<RwLock<System>>) -> Json<Stats> {
         total_disk: disk_total / 1000024, // Convert to MB,
         used_disk: disk_used / 1000024,   // Convert to MB
         free_disk: disk_free / 1000024,   // Convert to MB
+        uptime_hours,
+        docker_containers: get_docker_count(),
+        last_update: get_last_update(),
     })
 }
 
@@ -93,7 +142,7 @@ async fn main() {
             get(|| async { axum::response::Html(include_str!("../static/index.html")) }),
         );
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:9000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8086").await.unwrap();
     println!("Listening on http://{}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
